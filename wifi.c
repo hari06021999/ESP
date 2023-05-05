@@ -6,19 +6,17 @@
 #include <ArduinoJson.h>
 #define LED D0            // Led in NodeMCU at pin GPIO16 (D0).
 #define WIFI_LED D1
-#define SIZE 512
-#define EEPRM_ERACE D4
+
 //Variables
 int i = 0;
 int statusCode;
-const char* ssid = "default";
-const char* passphrase = "default";
+const char* ssid = "Default_SSID";
+const char* passphrase = "Default_Password";
 const char* local_ip;
 String st;
 String content;
 const char *topic = "starttopic";
 const int mqtt_port = 1883;
-int buttonState=0;
 int solar=A0;
 int ir_status=0;
 int buff[20]; 
@@ -49,7 +47,6 @@ void setup()
     digitalWrite(WIFI_LED,LOW);
    digitalWrite(LED,LOW);
    pinMode(2,OUTPUT); 
-   pinMode(EEPRM_ERACE, INPUT_PULLUP);
   Serial.println("Disconnecting current wifi connection");
   WiFi.disconnect();
   EEPROM.begin(512); //Initialasing EEPROM
@@ -97,7 +94,6 @@ void setup()
   client.setServer(eipadd, mqtt_port);
   
   while (!client.connected()) {
-
       String client_id = "esp8266-client-";
       client_id += String(WiFi.macAddress());
     //  Serial.printf("The client %s connects to the public mqtt broker\n", client_id.c_str());
@@ -164,83 +160,23 @@ void loop() {
       solar_fun();
   }
   
-      buttonState = digitalRead(EEPRM_ERACE);
-  if(buttonState == HIGH)
-  {
-    Serial.println("Waiting.");
-    for (int i = 0; i < SIZE; i++)
-    {
-        EEPROM.write(i++,0);
-    }
-    Serial.println("completed.");
-    buttonState=0;
-  }
+  
   client.loop();
+ 
    if(Serial.available())
   {
-    char name[30];
-    char ID[30];
-    char result[10];
-    char data_buffer[150];
-    int count_1=0;
-    int count_2=0;
-    int count_3=0;
-    int buffer_increment=0;
-    int id_increment=0;
-    int name_increment=0;
-    int status_increment=0;
-    int id=0;
-   data_buffer[buffer_increment++] = Serial.read();
-   while(1)
-   {
-     if(data_buffer[count_1]=='#')
-     {
-         ++count_1;
-     }
-     if(data_buffer[count_2]=='@')
-     {
-       ++count_2;
-     }
-     if(data_buffer[count_3]=='$')
-     {
-       ++count_3;
-     }
-     if(count_1==1)
-     {
-       if(data_buffer[count_1+1] != '#')
-       {
-         ID[id_increment]=data_buffer[count_1+1];
-         id_increment++;
-       }
-     }
-     if(count_2==1)
-     {
-       if(data_buffer[count_2+1] != '@')
-       {
-         name[name_increment]=data_buffer[count_2+1];
-         name_increment++;
-       }
-     }
-     if(count_3==1)
-     {
-       if(data_buffer[count_3+1] != '$')
-       {
-         result[status_increment]=data_buffer[count_3+1];
-         status_increment++;
-       }
-     }
-   }
+    char rec = Serial.read();
     solar_flag=0;
-       publishMessage(ID,name,result);
+       publishMessage(rec);
+
+
   }
 
 }
-void publishMessage(char ID[],char name[],char result[])
+void publishMessage(char rec)
 {
   StaticJsonDocument<200> doc;
-  doc["id"]=ID;
-  doc["name"]=name;
-  doc["status"] =result;
+  doc["status"] =rec;
   char jsonBuffer[512];
   serializeJson(doc, jsonBuffer); // print to client
   client.publish("resulttopic", jsonBuffer);
@@ -357,7 +293,7 @@ void setupAP(void)
   }
   st += "</ol>";
   delay(100);
-  WiFi.softAP("MMTS", "12345678");
+  WiFi.softAP("MMTS", "");
   Serial.println("Initializing_softap_for_wifi credentials_modification");
   launchWeb();
   Serial.println("over");
